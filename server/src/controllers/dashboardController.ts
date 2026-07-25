@@ -23,9 +23,9 @@ export const getDonorDashboard = async (
       status: "AVAILABLE",
     });
 
-    const reserved = await Donation.countDocuments({
+    const requested = await Donation.countDocuments({
       donor: donorId,
-      status: "RESERVED",
+      status: "REQUESTED",
     });
 
     const pickedUp = await Donation.countDocuments({
@@ -64,7 +64,7 @@ export const getDonorDashboard = async (
       dashboard: {
         totalDonations,
         available,
-        reserved,
+        requested,
         pickedUp,
         pendingRequests,
         acceptedRequests,

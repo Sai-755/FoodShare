@@ -10,6 +10,9 @@ import uploadRoutes from "./routes/uploadRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import { setupSwagger } from "./swagger";
 
+
+
+
 const app = express();
 
 // Middleware

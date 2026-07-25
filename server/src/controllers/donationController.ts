@@ -124,6 +124,7 @@ export const getDonationById = async (
 /**
  * Get My Donations
  */
+
 export const getMyDonations = async (
   req: any,
   res: Response
@@ -131,14 +132,9 @@ export const getMyDonations = async (
 
   try {
 
-    console.log(
-      "🔥 GET MY DONATIONS CALLED"
-    );
+    console.log("🔥 GET MY DONATIONS CALLED");
 
-    console.log(
-      "USER:",
-      req.user
-    );
+    console.log("USER:", req.user);
 
 
     const donations = await Donation.find({
@@ -162,7 +158,7 @@ export const getMyDonations = async (
     });
 
 
-  } catch (error:any) {
+  } catch (error: any) {
 
     console.error(
       "❌ GET MY DONATIONS ERROR:",
@@ -171,14 +167,15 @@ export const getMyDonations = async (
 
 
     return res.status(500).json({
-      success:false,
-      message:error.message,
+      success: false,
+      message: error.message,
     });
 
   }
-
 };
- * Update Donation
+
+ /** 
+  * Update Donation
  */
 export const updateDonation = async (
   req: any,
