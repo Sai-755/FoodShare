@@ -1,114 +1,187 @@
 import { Request, Response } from "express";
 import Donation from "../models/Donation";
-import RequestModel from "../models/Request";
-import { AuthRequest } from "../middleware/authMiddleware";
 
-// Create Donation
-export const createDonation = async (
-  req: AuthRequest,
-  res: Response
-) => {
+/**
+ * Create Donation
+ */
+export const createDonation = async (req: any, res: Response) => {
   try {
-
-    console.log("=====================================");
-    console.log("Request Body:", req.body);
+    const {
+      foodName,
+      description,
+      category,
+      foodType,
+      quantity,
+      quantityUnit,
+      pickupAddress,
+      pickupTime,
+      expiryTime,
+      latitude,
+      longitude,
+      images,
+    } = req.body;
 
     const donation = await Donation.create({
       donor: req.user._id,
-      foodName: req.body.foodName,
-      quantity: req.body.quantity,
-      foodType: req.body.foodType,
-      description: req.body.description,
-      expiryTime: req.body.expiryTime,
-      pickupAddress: req.body.pickupAddress,
-      latitude: req.body.latitude,
-      longitude: req.body.longitude,
+
+      foodName,
+      description,
+      category,
+      foodType,
+      quantity,
+      quantityUnit,
+      pickupAddress,
+      pickupTime,
+      expiryTime,
+
+      latitude,
+      longitude,
 
       location: {
-      type: "Point",
-      coordinates: [
-      Number(req.body.longitude),
-      Number(req.body.latitude),
-  ],
-},
-      image: req.body.image,
-    });
+        type: "Point",
+        coordinates: [longitude, latitude],
+      },
 
-    console.log("=====================================");
-    console.log("Donation Saved Successfully");
-    console.log("Database   :", donation.db.name);
-    console.log("Collection :", donation.collection.name);
-    console.log("Document ID:", donation._id);
-    console.log("Image URL  :", donation.image);
-    console.log("=====================================");
+      images,
+    });
 
     return res.status(201).json({
       success: true,
-      message: "Donation Created Successfully",
+      message: "Donation created successfully",
       donation,
     });
-
-  } catch (error) {
-
-    console.error("Create Donation Error:");
+  } catch (error: any) {
     console.error(error);
 
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
+      message: error.message,
     });
-
   }
 };
-// Get All Donations
 
-export const getAllDonations = async (req: Request, res: Response) => {
+/**
+ * Get All Donations
+ */
+export const getAllDonations = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const donations = await Donation.find({
-      status: "AVAILABLE",
+      isDeleted: false,
     })
       .populate("donor", "fullName email phone")
       .sort({ createdAt: -1 });
+
+    return res.json({
+      success: true,
+      count: donations.length,
+      donations,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Get Donation By ID
+ */
+export const getDonationById = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const donation = await Donation.findById(
+      req.params.id
+    ).populate("donor", "fullName email phone");
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: "Donation not found",
+      });
+    }
+
+    donation.views += 1;
+    await donation.save();
+
+    return res.json({
+      success: true,
+      donation,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/**
+ * Get My Donations
+ */
+export const getMyDonations = async (
+  req: any,
+  res: Response
+) => {
+
+  try {
+
+    console.log(
+      "🔥 GET MY DONATIONS CALLED"
+    );
+
+    console.log(
+      "USER:",
+      req.user
+    );
+
+
+    const donations = await Donation.find({
+      donor: req.user._id,
+      isDeleted: false,
+    }).sort({
+      createdAt: -1,
+    });
+
+
+    console.log(
+      "DONATIONS COUNT:",
+      donations.length
+    );
+
 
     return res.status(200).json({
       success: true,
       count: donations.length,
       donations,
     });
-  } catch (error) {
+
+
+  } catch (error:any) {
+
+    console.error(
+      "❌ GET MY DONATIONS ERROR:",
+      error
+    );
+
+
     return res.status(500).json({
-      success: false,
-      message: "Failed to fetch donations",
+      success:false,
+      message:error.message,
     });
+
   }
+
 };
-
-export const getDonationById = async (req: Request, res: Response) => {
-  try {
-    const donation = await Donation.findById(req.params.id)
-      .populate("donor", "fullName email phone");
-
-    if (!donation) {
-      return res.status(404).json({
-        success: false,
-        message: "Donation not found",
-      });
-    }
-
-    return res.status(200).json({
-      success: true,
-      donation,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch donation",
-    });
-  }
-};
-
+ * Update Donation
+ */
 export const updateDonation = async (
-  req: AuthRequest,
+  req: any,
   res: Response
 ) => {
   try {
@@ -121,7 +194,6 @@ export const updateDonation = async (
       });
     }
 
-    // Only owner can update
     if (donation.donor.toString() !== req.user._id.toString()) {
       return res.status(403).json({
         success: false,
@@ -129,181 +201,63 @@ export const updateDonation = async (
       });
     }
 
-    Object.assign(donation, req.body);
-
-    await donation.save();
-
-    return res.status(200).json({
-      success: true,
-      message: "Donation updated successfully",
-      donation,
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-
-  }
-};
-export const deleteDonation = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const donation = await Donation.findById(req.params.id);
-
-    if (!donation) {
-      return res.status(404).json({
-        success: false,
-        message: "Donation not found",
-      });
-    }
-
-    // Only owner can delete
-    if (donation.donor.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-
-    await donation.deleteOne();
-
-    return res.status(200).json({
-      success: true,
-      message: "Donation deleted successfully",
-    });
-
-  } catch (error) {
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
-
-  }
-};
-// ==============================
-// Complete Donation
-// ==============================
-export const completeDonation = async (
-  req: AuthRequest,
-  res: Response
-) => {
-  try {
-    const { id } = req.params;
-
-    // Find Donation
-    const donation = await Donation.findById(id);
-
-    if (!donation) {
-      return res.status(404).json({
-        success: false,
-        message: "Donation not found",
-      });
-    }
-
-    // Only donor can complete donation
-    if (donation.donor.toString() !== req.user!._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized",
-      });
-    }
-
-    // Donation must be RESERVED
-    if (donation.status !== "RESERVED") {
-      return res.status(400).json({
-        success: false,
-        message: "Donation is not reserved",
-      });
-    }
-
-    // Update donation status
-    donation.status = "PICKED_UP";
-    await donation.save();
-
-    // Update accepted request status
-    await RequestModel.findOneAndUpdate(
-      {
-        donation: donation._id,
-        status: "ACCEPTED",
-      },
-      {
-        status: "COMPLETED",
-      },
+    const updatedDonation = await Donation.findByIdAndUpdate(
+      req.params.id,
+      req.body,
       {
         new: true,
       }
     );
 
-    return res.status(200).json({
+    return res.json({
       success: true,
-      message: "Donation completed successfully",
-      donation,
+      message: "Donation updated successfully",
+      donation: updatedDonation,
     });
-
-  } catch (error) {
-    console.error("Complete Donation Error:", error);
-
+  } catch (error: any) {
     return res.status(500).json({
       success: false,
-      message: "Internal Server Error",
-      error,
+      message: error.message,
     });
   }
 };
 
-// ============================================
-// Get Nearby Donations
-// ============================================
-
-export const getNearbyDonations = async (
-  req: Request,
+/**
+ * Delete Donation (Soft Delete)
+ */
+export const deleteDonation = async (
+  req: any,
   res: Response
 ) => {
   try {
-    const latitude = Number(req.query.lat);
-    const longitude = Number(req.query.lng);
-    const radius = Number(req.query.radius) || 5;
+    const donation = await Donation.findById(req.params.id);
 
-    if (isNaN(latitude) || isNaN(longitude)) {
-      return res.status(400).json({
+    if (!donation) {
+      return res.status(404).json({
         success: false,
-        message: "Latitude and Longitude are required",
+        message: "Donation not found",
       });
     }
 
-    const donations = await Donation.find({
-      status: "AVAILABLE",
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: [longitude, latitude],
-          },
-          $maxDistance: radius * 1000,
-        },
-      },
-    }).populate("donor", "fullName phone");
+    if (donation.donor.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
 
-    return res.status(200).json({
+    donation.isDeleted = true;
+
+    await donation.save();
+
+    return res.json({
       success: true,
-      count: donations.length,
-      donations,
+      message: "Donation deleted successfully",
     });
-
-  } catch (error) {
-
-    console.error(error);
-
+  } catch (error: any) {
     return res.status(500).json({
       success: false,
-      message: "Failed to fetch nearby donations",
+      message: error.message,
     });
-
   }
 };
